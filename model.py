@@ -23,14 +23,22 @@ targets = {
 
 feature_columns = {
     "transaction": [
-        "TransactionsCred", "TransactionsDeb", "TransactionsDebCashless_Card",
-        "TransactionsDebCash_Card", "TransactionsDeb_PaymentOrder"
+        "TransactionsCred", 
+        "TransactionsDeb",
+        "TransactionsDebCashless_Card",
+        "TransactionsDebCash_Card", 
+        "TransactionsDeb_PaymentOrder", "VolumeCred", 
+        "VolumeDeb", 
+        "VolumeDebCash_Card",
+        "VolumeDebCashless_Card",
+        "VolumeDeb_PaymentOrder"
     ],
     "numeric": [
-        "Count_CA", "Count_SA", "Count_MF", "Count_CL", "Count_CC",
+        "Count_CA", "Count_SA", "Count_MF", "Count_CL", "Count_CC","Count_OVD",
         "ActBal_CA", "ActBal_SA", "ActBal_MF", "ActBal_CL", 
         "ActBal_CC", "ActBal_OVD",
-        "Age", "Tenure"
+        "Age", "Tenure",
+       
     ],
     "categorical": [
         "Sex"
