@@ -5,6 +5,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer, KNNImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+from sklearn.feature_selection import RFE
 from sklearn.metrics import roc_auc_score, classification_report
 import xgboost as xgb
 from sklearn.metrics import mean_squared_error
@@ -20,48 +21,30 @@ targets = {
     "MF": "Sale_MF" 
 }
 
+feature_columns = {
+    "transaction": [
+        "TransactionsCred", "TransactionsDeb", "TransactionsDebCashless_Card",
+        "TransactionsDebCash_Card", "TransactionsDeb_PaymentOrder"
+    ],
+    "numeric": [
+        "Count_CA", "Count_SA", "Count_MF", "Count_CL", "Count_CC",
+        "ActBal_CA", "ActBal_SA", "ActBal_MF", "ActBal_CL", 
+        "ActBal_CC", "ActBal_OVD",
+        "Age", "Tenure"
+    ],
+    "categorical": [
+        "Sex"
+    ]
+}
+
 
 class ProductPropensityModel:
     def __init__(self, target_product):
         self.target_product = target_product
         
-        feature_sets = {
-            "MF": {
-                "transaction": [
-                    "TransactionsCred", "TransactionsDeb",
-                     "TransactionsDebCashless_Card"
-                ],
-                "numeric": [
-                    "Count_SA", "Count_MF", "Count_CL",
-                    "ActBal_CA", "ActBal_MF", "ActBal_CL"
-                ]
-            },
-            "CC": {
-                "transaction": [
-                    "TransactionsDebCash_Card","TransactionsCred",
-                ],
-                "numeric": [
-                    "ActBal_SA", "ActBal_OVD",
-                    "Count_MF", "Count_CL"
-                ]
-            },
-            "CL": {
-                "transaction": [
-                    "TransactionsCred", "TransactionsDeb",
-                    "TransactionsDebCash_Card", "TransactionsDeb_PaymentOrder"
-                ],
-                "numeric": [
-                    "Age", "Tenure",
-                    "Count_CA", "Count_SA", "Count_CL",
-                    "ActBal_CA", "ActBal_OVD", "ActBal_CC"
-                ]
-            }
-        }
-        
-        # Select features based on target product
-        self.transaction_features = feature_sets[target_product]["transaction"]
-        self.other_numeric_features = feature_sets[target_product]["numeric"]
-        self.categorical_features = ["Sex"]  # Keep categorical features unchanged
+        self.transaction_features = feature_columns["transaction"]
+        self.other_numeric_features = feature_columns["numeric"]
+        self.categorical_features = feature_columns["categorical"]
         
         self.preprocessor = ColumnTransformer(
             transformers=[
@@ -76,16 +59,19 @@ class ProductPropensityModel:
                 ('cat', OneHotEncoder(handle_unknown='ignore'), self.categorical_features)
             ])
         
+        base_classifier = xgb.XGBClassifier(
+            objective='binary:logistic',
+            random_state=42,
+            learning_rate=0.01,        
+            max_depth=10,             
+            n_estimators=100,         
+        )
+        
         self.model = ImbPipeline(steps=[
             ('preprocessor', self.preprocessor),
+            ('rfe', RFE(estimator=base_classifier, n_features_to_select=10)), 
             ('smote', SMOTE(random_state=42)),
-            ('classifier', xgb.XGBClassifier(
-                objective='binary:logistic',
-                random_state=42,
-                learning_rate=0.01,        
-                max_depth=10,             
-                n_estimators=100,         
-            ))
+            ('classifier', base_classifier)
         ])
 
     def train(self, data, n_splits=5, random_state=42):
